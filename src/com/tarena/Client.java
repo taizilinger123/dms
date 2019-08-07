@@ -1,11 +1,12 @@
 package com.tarena;
 
+import java.util.List;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
-import java.util.Random;
-
+import java.util.ArrayList;
 import com.tarena.util.IOUtil;
+import bo.LogData;
 
 /**
  * 客户端应用程序
@@ -69,7 +70,7 @@ public class Client {
 		    * 减去这次准备开始读取的位置，应当
 		    * 大于一条日志所占用的字节量(372)
 		    */
-		   if(logFile.length()-lastposition<372){
+		   if(logFile.length()-lastposition<LogData.LOG_LENGTH){
 			   lastposition = -1;
 		   }
 		   
@@ -87,7 +88,7 @@ public class Client {
  * @throws IOException 
     */
    public boolean hasLogsByStep(RandomAccessFile raf) throws IOException{
-	   if(logFile.length()-raf.getFilePointer()>=372){
+	   if(logFile.length()-raf.getFilePointer()>=LogData.LOG_LENGTH){
 		   return true;
 	   }else{
 		   return false;
@@ -127,8 +128,14 @@ public class Client {
 	   try {
 		 //创建RandomAccessFile来读取日志文件
 		 RandomAccessFile  raf = new RandomAccessFile(logFile, "r");
+		 
 		 //移动游标到指定位置，开始继续读取
 		 raf.seek(lastposition);
+		 
+		 //定义一个集合，用于保存解析后的日志
+		 List<LogData> logs = new ArrayList<LogData>();
+		 
+		 
 		 //循环batch次，解析batch条日志
 		 for(int i=0;i<batch;i++){
 			 /*
@@ -137,7 +144,42 @@ public class Client {
 			 if(!hasLogsByStep(raf)){
 				 break;
 			 }
+			 
+			 //读取用户名
+			 String user = IOUtil.readString(raf, LogData.USER_LENGTH);
+			 
+			 //读取pid
+			 raf.seek(lastposition+LogData.PID_OFFSET);
+			 int pid = IOUtil.readInt(raf);
+			 
+			 //读取TYPE
+			 raf.seek(lastposition+LogData.TYPE_OFFSET);
+			 short type = IOUtil.readShort(raf);
+			 
+			 //读取TIME
+			 raf.seek(lastposition+LogData.TIME_OFFSET);
+			 int time = IOUtil.readInt(raf);
+			 
+			 //读取HOST
+			 raf.seek(lastposition+LogData.HOST_OFFSET);
+			 String host = IOUtil.readString(raf, LogData.HOST_LENGTH);
+			 
+			 /*
+			  * 将lastposition设置为当前raf的游标位置
+			  */
+			 lastposition=raf.getFilePointer();
+			 /*
+			  * 将解析出来的数据存入一个LogData对象中，再将该对象存入集合中。
+			  */
+			 LogData log = new LogData(user, pid, type, time, host);
+			 logs.add(log);
 		 }
+		 System.out.println("共解析了"+logs.size()+"个日志");
+		 for(LogData log : logs){
+			 System.out.println(log);
+		 }
+		 
+		 
 	} catch (Exception e) {
 		e.printStackTrace();
 	}
