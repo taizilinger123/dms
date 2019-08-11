@@ -1,10 +1,12 @@
 package com.tarena.util;
 
+import java.util.List;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.PrintWriter;
 import java.io.RandomAccessFile;
 
 /**
@@ -74,5 +76,39 @@ public class IOUtil {
   public static short readShort(RandomAccessFile raf)throws IOException{
 	  return raf.readShort();
   }
-  
+  /**
+   * 将给定的集合中的每个元素的toString方法返回的字符串，作为一行内容写入给定的文件中。
+   * @param list
+   * @param file
+   * @throws IOException
+   */
+  public static void saveList(List list,File file)throws IOException{
+	  PrintWriter pw = null;
+	  try{
+		  pw = new PrintWriter(file);
+		  for(Object o : list){
+                pw.println(o);			  
+		  }
+	  }finally {
+		if(pw!=null){
+			pw.close();
+		}
+	   }  
+      }
+      /**
+       * 将给定的long值作为一行字符串写入给定的文件中
+       * @param l
+       * @param file
+       */
+      public  static  void saveLong(long l, File file)throws IOException{
+    	  PrintWriter pw = null;
+    	  try{
+    		  pw = new PrintWriter(file);
+              pw.println(l);			  
+    	  }finally {
+    		if(pw!=null){
+    			pw.close();
+    		}
+    	   }
+      }
 }

@@ -174,11 +174,19 @@ public class Client {
 			 LogData log = new LogData(user, pid, type, time, host);
 			 logs.add(log);
 		 }
-		 System.out.println("共解析了"+logs.size()+"个日志");
-		 for(LogData log : logs){
-			 System.out.println(log);
-		 }
-		 
+//		 System.out.println("共解析了"+logs.size()+"个日志");
+//		 for(LogData log : logs){
+//			 System.out.println(log);
+//		 }
+		 /*
+		  * 将解析后的日志写入log.txt文件中
+		  */
+		 IOUtil.saveList(logs, textLogFile);
+		 /*
+		  * 将这次解析后，RandomAccessFile的游标位置记录，以便于下次解析的时候继续读取。
+		  */
+		 IOUtil.saveLong(raf.getFilePointer(), lastPositionFile);
+		 return true;
 		 
 	} catch (Exception e) {
 		e.printStackTrace();
