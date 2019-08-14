@@ -121,10 +121,16 @@ public class Client {
 	   if(lastposition<0){
 		   return false;
 	   }
-	   //预留一个判断
 	   /*
-	    * 
+	    * 为了避免重复执行第一步，导致原来第一步中已经解析的日志文件被废弃，
+	    * 我们可以先判断，若第一步执行完毕后生成的log.txt文件存在，就不再执行第一步了。
+	    * 该文件会在第二步执行完毕后删除。
 	    */
+	   if(textLogFile.exists()){
+		   //该文件存在，说明解析过了
+		   return true;
+	   }
+	   
 	   try {
 		 //创建RandomAccessFile来读取日志文件
 		 RandomAccessFile  raf = new RandomAccessFile(logFile, "r");
