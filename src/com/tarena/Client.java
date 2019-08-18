@@ -1,12 +1,17 @@
 package com.tarena;
 
-import java.util.List;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
 import java.util.ArrayList;
+import java.util.HashMap;
 import com.tarena.util.IOUtil;
 import bo.LogData;
+import bo.LogRec;
 
 /**
  * 客户端应用程序
@@ -29,6 +34,12 @@ public class Client {
    //每次从wtmpx文件中解析日志的条数
    private int batch;
    
+   //保存每次配对完毕后的所有配对日志的文件
+   private File logRecFile;
+   
+   //保存每次配对后，没有配对成功的登入日志的文件
+   private File loginFile;
+   
    /**
     * 构造方法中初始化
     */
@@ -38,7 +49,9 @@ public class Client {
 		 logFile = new File("wtmpx");
 		 lastPositionFile = new File("last-position.txt");
 		 textLogFile = new File("log.txt");
-		
+		 logRecFile = new File("logrec.txt");
+		 loginFile = new File("login.txt");
+		 
 	} catch (Exception e) {
 		e.printStackTrace();
 		throw new RuntimeException(e);
@@ -200,6 +213,96 @@ public class Client {
 	   
 	   return false;
    }
+   /**
+    * 第二大步的：
+    * 匹配日志
+    * 
+    * 大体步骤:
+    * 1:读取log.txt文件，将第一步解析出的
+    *   日期读取出来并转换为若干个LogData
+    *   对象存入List集合中等待配对。
+    * 2:读取login.txt文件，将上一次没有配对
+    *   成功的登入日志读取出来并转换为若干个LogData对象，
+    *   也存入List集合中，等待这次配对。
+    * 3:循环List,将登入与登出日志分别存入到
+    *   两个Map中，value就是对应的日志对象，
+    *   key都是[user,pid,ip]这样格式的字符串
+    * 4:循环登出的map,并通过key寻找登入map中的登入日志，以达到
+    *   配对的目的，将配对的日志转换为一个LogRec对象存入一个List集合中
+    * 5:将所有配对成功的日志写入文件logrec.txt
+    * 6:将所有没配对成功的日志写入文件login.txt
+    * @return
+    */
+   public boolean matchLogs(){
+	   /*
+	    * 必要的判断
+	    */
+	   //1 检查log.txt文件是否存在
+	   if (!textLogFile.exists()) {
+		      return false;
+	   }
+	   //2 先不写。 留着
+	   
+	   /*
+	    * 业务逻辑
+	    */
+	   try {
+	   //1	   
+	   List<LogData> list = IOUtil.loadLogData(textLogFile);
+	   
+	   //2
+	   if(loginFile.exists()){
+		   list.addAll(IOUtil.loadLogData(loginFile));
+	   }
+	   //3
+	   Map<String,LogData> loginMap = new HashMap<String, LogData>();
+	   Map<String,LogData> logoutMap = new HashMap<String, LogData>();
+	   
+	   for(LogData log : list){
+		   if(log.getType()==LogData.TYPE_LOGIN){
+			   putLogToMap(log,loginMap);
+		   }else if(log.getType()==LogData.TYPE_LOGOUT){
+			   putLogToMap(log,logoutMap);
+		   }
+	   }
+	   
+	   //4
+	   Set<Entry<String,LogData>> set = logoutMap.entrySet();
+	   
+	   //用于存放所有配对成功的日志的集合
+	   List<LogRec> logRecList = new ArrayList<LogRec>();
+	   
+	   for(Entry<String,LogData> entry:set){
+		   /*
+		    * 从登出MAP中，取出key
+		    */
+		   String key = entry.getKey();
+		   /*
+		    * 根据登出的key,从登入map中以相同的key删除元素，删除的就是对应的登入日志
+		    */
+		   LogData login = loginMap.remove(key);
+		   if(login!=null){
+			   //匹配后，转换为一个LogRec对象
+			   LogRec logrec = new LogRec(login, entry.getValue());
+			   logRecList.add(logrec);
+		   }
+		   
+	   }
+	   
+	}catch (Exception e) {
+		e.printStackTrace();
+		return false;
+	}   
+   }
+   /**
+    * 将给定的日志存入给定的Map中 
+    * @param log
+    * @param map
+    */
+   private void putLogToMap(LogData log, Map<String,LogData> map){
+	   map.put(log.getUser()+","+log.getPid()+","+log.getHost(), log);
+   }
+   
    
    /**
     * 客户端开始工作的方法

@@ -1,6 +1,10 @@
 package com.tarena.util;
 
+import java.util.ArrayList;
 import java.util.List;
+
+import bo.LogData;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
@@ -110,5 +114,35 @@ public class IOUtil {
     			pw.close();
     		}
     	   }
+         }
+      /**
+       * 从指定的文件中按行读取每一条日志，并转换为一个LogData对象，最终将所有日志
+       * 对象存入一个List集合中并返回
+       * @param file
+       * @return
+       */
+      public static List<LogData> loadLogData(File file) throws IOException{
+    	  BufferedReader br = null;
+    	  try {
+    		  FileInputStream fis = new FileInputStream(file);
+    		  InputStreamReader isr = new InputStreamReader(fis);
+    		  br = new BufferedReader(isr);
+    		  List<LogData> list = new ArrayList<LogData>();
+    		  String line = null;
+    		  while((line=br.readLine())!=null){
+                  /*
+                   * 解析过程应当交给LogData原因在于该字符串的格式是由
+                   * LogData自身的toString决定的所以解析自然也应该
+                   * 交给它。                               
+                   */
+    			  LogData log = new LogData(line);
+    			  list.add(log);      			  
+    		  }
+		      return list;
+		}finally {
+			if(br != null){
+				br.close();
+			}
+		 }
       }
 }

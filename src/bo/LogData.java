@@ -65,6 +65,25 @@ public class LogData {
 		this.time = time;
 		this.host = host;
 	}
+     /**
+      * 给定一个字符串
+      * (格式应该是当前类toString方法生成)
+      * 将该字符串转换为一个LogData对象
+      * @param line
+      */
+    public LogData(String line){
+    	//1:按照","拆分字符串
+    	String[] array = line.split(",");
+    	//2:将数组中的每一项设置到属性上即可
+    	this.user = array[0];
+    	this.pid = Integer.parseInt(array[1]);
+    	this.type = Short.parseShort(array[2]);
+    	this.time = Integer.parseInt(array[3]);
+    	this.host = array[4];
+    	
+    	
+    	
+    }
 	public String getUser() {
 		return user;
 	}
