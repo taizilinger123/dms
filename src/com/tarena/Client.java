@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import com.tarena.util.IOUtil;
 import bo.LogData;
@@ -241,8 +242,17 @@ public class Client {
 	   if (!textLogFile.exists()) {
 		      return false;
 	   }
-	   //2 先不写。 留着
-	   
+	   /*
+	    * 当第二步已经执行完毕后，会生成两个文件：logrec.txt,login.txt
+	    * 若第三步在执行时出现错误，我们若重新执行第二步，会将上次第二步已经配对
+	    * 的日志被覆盖，从而导致数据丢失。为此我们要做一个必要的判断，就是logrec.txt
+	    * 文件若存在，则说明第二步已经完成，但是第三步没有顺利执行。因为第三步执行完毕后，会将
+	    * 该文件删除。所以，若存在，则第二步不再执行。
+	    */
+	    if(logRecFile.exists()){
+	    	return true;
+	    }
+	       
 	   /*
 	    * 业务逻辑
 	    */
@@ -284,13 +294,34 @@ public class Client {
 		   if(login!=null){
 			   //匹配后，转换为一个LogRec对象
 			   LogRec logrec = new LogRec(login, entry.getValue());
+			   //将配对日志存入集合
 			   logRecList.add(logrec);
 		   }
-		   
 	   }
+	   //出了for循环，相当于配对工作就完毕了
 	   
+	   //5
+	   IOUtil.saveList(logRecList, logRecFile);
+	   
+	   //6
+	   Collection<LogData> c = loginMap.values();
+	   
+	   IOUtil.saveList(new ArrayList(c), loginFile);
+	   /*
+	    * 当第二步执行完毕后，log.txt文件就可以删除了
+	    */
+	   textLogFile.delete();
+	   
+	   return true;
 	}catch (Exception e) {
 		e.printStackTrace();
+		/*
+		 * 若第二步出现异常，那么第二步生成的配对文件logrec.txt文件就是无效的。
+		 * 应当删除，以便于重新执行第二步。
+		 */
+		if(logRecFile.exists()){
+			logRecFile.delete();
+		}
 		return false;
 	}   
    }
@@ -317,6 +348,8 @@ public class Client {
 	   //1
 	   readNextLogs();
 	   
+	   //2
+	   matchLogs();
    }
    
    public static void main(String[] args) {
