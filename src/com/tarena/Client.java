@@ -1,8 +1,16 @@
 package com.tarena;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
 import java.io.RandomAccessFile;
+import java.net.Socket;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -333,7 +341,88 @@ public class Client {
    private void putLogToMap(LogData log, Map<String,LogData> map){
 	   map.put(log.getUser()+","+log.getPid()+","+log.getHost(), log);
    }
-   
+   /**
+    * 第三步：
+    * 将配对的日志发送至服务端
+    * 步骤：
+    * 1：创建Socket用于连接服务器
+    * 2：通过Socket获取输出流，并逐步包装为缓冲字符输出流。字符集是UTF-8.
+    * 3：创建缓冲字符输入流，用于读取logrec.txt(读取配对日志)
+    * 4：从logrec文件中读取每一行日志信息并发送至服务端
+    * 5：通过Socket获取输入流，并逐步包装为缓冲字符输入流，用于读取服务端的响应。
+    * 6：读取服务端的响应，若是"OK",则说明服务端成功接收了我们发送的配对日志
+    *   那么就将logrec.txt文件删除。
+    *   第三步执行完毕。
+    *   若返回的响应不是"OK",则表示发送没有成功，那么该方法返回false,应当重新尝试执行第三步。
+    * @return
+    */
+   public  boolean sendLogToServer(){
+	   /*
+	    * 必要判断
+	    */
+	   if(!logRecFile.exists()){
+		   return false;
+	   }
+	   /*
+	    * 业务逻辑
+	    */
+	   Socket socket = null;
+	   BufferedReader br = null;
+	   try {
+		   socket = new Socket("localhost",8088);
+		   OutputStream out = socket.getOutputStream();
+		   OutputStreamWriter osw = new OutputStreamWriter(out,"UTF-8");
+		   PrintWriter pw = new PrintWriter(osw);
+		   //读取logrec.txt
+		   FileInputStream fis = new FileInputStream(logRecFile);
+		   InputStreamReader isr = new InputStreamReader(fis);
+		   br = new BufferedReader(isr);
+		   String line = null;
+		   /*
+		    * 循环从logrec.txt文件中读取每一行配对日志，并发送至服务端
+		    */
+		   while((line=br.readLine())!=null){
+			   pw.println(line);
+		   }
+		   pw.flush();
+		   //已经将logrec.txt文件中的内容发送了，发送完，将读取文件的流关掉。
+		   br.close();
+		   /*
+		    * 通过Socket创建输入流，用于读取服务端的响应
+		    */
+		   InputStream in = socket.getInputStream();
+		   BufferedReader brServer = new BufferedReader(new InputStreamReader(in,"UTF-8"));
+		   //读取服务端发送回来的响应
+		   String response = brServer.readLine();
+		   if("OK".equals(response)){
+			   /*
+			    * 服务端正确接收发送的日志后就可以将第二步生成的logrec.txt文件删除了。
+			    */
+			   logRecFile.delete();
+			   return true;
+		   }
+		   return false;		      
+		} catch (Exception e) {
+			e.printStackTrace();
+			return false;
+		}finally {
+			//将socket关闭
+			if(socket != null){
+				try {
+					socket.close();
+				} catch (IOException e) {
+				}
+			}
+			//读取文件的输入流也可能没关闭
+			if(br!=null){
+				try {
+					br.close();
+				} catch (IOException e) {
+				}
+			}
+			
+		}
+   }
    
    /**
     * 客户端开始工作的方法
