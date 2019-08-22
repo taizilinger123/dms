@@ -384,6 +384,8 @@ public class Client {
 		   while((line=br.readLine())!=null){
 			   pw.println(line);
 		   }
+		   //最后发送一个over,表示发送完毕了
+		   pw.println("over");
 		   pw.flush();
 		   //已经将logrec.txt文件中的内容发送了，发送完，将读取文件的流关掉。
 		   br.close();
@@ -434,11 +436,16 @@ public class Client {
 	    * 2:将解析后的日志和上次没有匹配的日志一起匹配成对
 	    * 3:将匹配成对的日志发送至服务端
 	    */
-	   //1
-	   readNextLogs();
-	   
-	   //2
-	   matchLogs();
+	   while(true){
+		   //1
+		   readNextLogs();
+		   
+		   //2
+		   matchLogs();
+		   
+		   //3 
+		   sendLogToServer();
+	   }
    }
    
    public static void main(String[] args) {
